@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "package: vsix",
+      "type": "shell",
+      "command": "node scripts/package-vsix.mjs",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "package: vsix (dry-run)",
+      "type": "shell",
+      "command": "node scripts/package-vsix.mjs --dry-run",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ]
+}

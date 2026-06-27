@@ -3,7 +3,7 @@
   "displayName": "Claude Commit Message",
   "description": "Generate git commit messages using Claude Code (claude -p). Supports Conventional Commits, emoji style, short/extended, Spanish/English — all configurable and persistent.",
   "version": "1.0.0",
-  "publisher": "ericrodriguez",
+  "publisher": "AgentstudioIA",
   "author": {
     "name": "Eric Rodriguez",
     "email": "eric92rodriguez@gmail.com"
@@ -12,20 +12,24 @@
   "icon": "images/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ericrodriguez/vscode-claude-commit"
+    "url": "https://github.com/EricERodriguez/vscode-claude-commit"
   },
   "bugs": {
-    "url": "https://github.com/ericrodriguez/vscode-claude-commit/issues"
+    "url": "https://github.com/EricERodriguez/vscode-claude-commit/issues"
   },
   "keywords": ["claude", "ai", "commit", "git", "conventional commits", "commit message"],
   "categories": ["Other", "SCM Providers"],
-  "engines": { "vscode": "^1.76.0" },
+  "engines": { "vscode": "^1.110.0" },
   "activationEvents": [
     "onCommand:claudeCommit.generate",
     "onCommand:claudeCommit.configure",
     "onView:scm"
   ],
   "main": "./extension.js",
+  "scripts": {
+    "package:vsix": "node scripts/package-vsix.mjs",
+    "package:vsix:dry": "node scripts/package-vsix.mjs --dry-run"
+  },
   "contributes": {
     "commands": [
       {
@@ -104,7 +108,7 @@
         "claudeCommit.claudePath": {
           "type": "string",
           "default": "",
-          "description": "Full path to the claude binary. Leave empty to search in PATH and ~/.local/bin/claude."
+          "description": "Full path to the claude binary. Leave empty to auto-detect from PATH and ~/.local/bin/claude."
         },
         "claudeCommit.maxDiffLines": {
           "type": "number",
