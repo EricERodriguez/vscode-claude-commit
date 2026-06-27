@@ -1,0 +1,119 @@
+{
+  "name": "claude-commit-message",
+  "displayName": "Claude Commit Message",
+  "description": "Generate git commit messages using Claude Code (claude -p). Supports Conventional Commits, emoji style, short/extended, Spanish/English — all configurable and persistent.",
+  "version": "1.0.0",
+  "publisher": "ericrodriguez",
+  "author": {
+    "name": "Eric Rodriguez",
+    "email": "eric92rodriguez@gmail.com"
+  },
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ericrodriguez/vscode-claude-commit"
+  },
+  "bugs": {
+    "url": "https://github.com/ericrodriguez/vscode-claude-commit/issues"
+  },
+  "keywords": ["claude", "ai", "commit", "git", "conventional commits", "commit message"],
+  "categories": ["Other", "SCM Providers"],
+  "engines": { "vscode": "^1.76.0" },
+  "activationEvents": [
+    "onCommand:claudeCommit.generate",
+    "onCommand:claudeCommit.configure",
+    "onView:scm"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "claudeCommit.generate",
+        "title": "Generate Commit Message (Claude)",
+        "shortTitle": "Claude",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "claudeCommit.configure",
+        "title": "Configure Claude Commit",
+        "shortTitle": "Configure",
+        "icon": "$(settings-gear)"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "claudeCommit.generate",
+          "when": "scmProvider == git",
+          "group": "navigation@1"
+        },
+        {
+          "command": "claudeCommit.configure",
+          "when": "scmProvider == git",
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "claudeCommit.generate",
+        "key": "ctrl+shift+alt+g",
+        "when": "scmProvider == git || scmFocus"
+      }
+    ],
+    "configuration": {
+      "title": "Claude Commit Message",
+      "properties": {
+        "claudeCommit.language": {
+          "type": "string",
+          "enum": ["spanish", "english"],
+          "enumDescriptions": [
+            "Genera mensajes de commit en español",
+            "Generate commit messages in English"
+          ],
+          "default": "spanish",
+          "description": "Language for generated commit messages."
+        },
+        "claudeCommit.style": {
+          "type": "string",
+          "enum": ["short", "extended"],
+          "enumDescriptions": [
+            "Single line: type(scope): description",
+            "Title + blank line + body + optional footers"
+          ],
+          "default": "short",
+          "description": "Commit message style."
+        },
+        "claudeCommit.format": {
+          "type": "string",
+          "enum": ["conventional", "emoji", "simple"],
+          "enumDescriptions": [
+            "feat(scope): description — Conventional Commits spec",
+            "✨ description — gitmoji style",
+            "description — plain description, no prefix"
+          ],
+          "default": "conventional",
+          "description": "Commit message format."
+        },
+        "claudeCommit.includeScope": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include scope in conventional commit messages (e.g. feat(auth): ...)."
+        },
+        "claudeCommit.claudePath": {
+          "type": "string",
+          "default": "",
+          "description": "Full path to the claude binary. Leave empty to search in PATH and ~/.local/bin/claude."
+        },
+        "claudeCommit.maxDiffLines": {
+          "type": "number",
+          "default": 500,
+          "minimum": 50,
+          "maximum": 5000,
+          "description": "Maximum number of diff lines to send to Claude. Large diffs are truncated."
+        }
+      }
+    }
+  }
+}
