@@ -2,7 +2,7 @@
   "name": "claude-commit-message",
   "displayName": "Claude Commit Message",
   "description": "Generate git commit messages using Claude Code (claude -p). Supports Conventional Commits, emoji style, short/extended, Spanish/English — all configurable and persistent.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "AgentstudioIA",
   "author": {
     "name": "Eric Rodriguez",
@@ -17,9 +17,21 @@
   "bugs": {
     "url": "https://github.com/EricERodriguez/vscode-claude-commit/issues"
   },
-  "keywords": ["claude", "ai", "commit", "git", "conventional commits", "commit message"],
-  "categories": ["Other", "SCM Providers"],
-  "engines": { "vscode": "^1.110.0" },
+  "keywords": [
+    "claude",
+    "ai",
+    "commit",
+    "git",
+    "conventional commits",
+    "commit message"
+  ],
+  "categories": [
+    "Other",
+    "SCM Providers"
+  ],
+  "engines": {
+    "vscode": "^1.110.0"
+  },
   "activationEvents": [
     "onCommand:claudeCommit.generate",
     "onCommand:claudeCommit.configure",
@@ -71,7 +83,10 @@
       "properties": {
         "claudeCommit.language": {
           "type": "string",
-          "enum": ["spanish", "english"],
+          "enum": [
+            "spanish",
+            "english"
+          ],
           "enumDescriptions": [
             "Genera mensajes de commit en español",
             "Generate commit messages in English"
@@ -81,7 +96,10 @@
         },
         "claudeCommit.style": {
           "type": "string",
-          "enum": ["short", "extended"],
+          "enum": [
+            "short",
+            "extended"
+          ],
           "enumDescriptions": [
             "Single line: type(scope): description",
             "Title + blank line + body + optional footers"
@@ -91,7 +109,11 @@
         },
         "claudeCommit.format": {
           "type": "string",
-          "enum": ["conventional", "emoji", "simple"],
+          "enum": [
+            "conventional",
+            "emoji",
+            "simple"
+          ],
           "enumDescriptions": [
             "feat(scope): description — Conventional Commits spec",
             "✨ description — gitmoji style",
