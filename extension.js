@@ -1,9 +1,10 @@
 'use strict';
 
 const vscode = require('vscode');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
 
 // ─── Prompt builder ───────────────────────────────────────────────────────────
 
@@ -181,9 +182,48 @@ function buildCleanEnv() {
   return env;
 }
 
-function findClaudeBin(configPath) {
-  if (configPath) return configPath;
-  return path.join(os.homedir(), '.local', 'bin', 'claude');
+// `claude` is installed in wildly different places depending on the machine
+// and how it was installed (native installer, `npm install -g`, nvm, a
+// custom prefix, ...) and the OS user can differ from PC to PC too. A single
+// hardcoded fallback path breaks the moment either of those changes, and
+// because `claudeCommit.claudePath` is a synced setting, fixing it on one PC
+// used to silently break every other one. Resolve it fresh on every machine
+// instead of trusting a stored absolute path.
+function resolveViaLoginShell() {
+  if (process.platform === 'win32') return null;
+  const shell = process.env.SHELL || '/bin/bash';
+  try {
+    const out = execFileSync(shell, ['-lc', 'command -v claude'], { encoding: 'utf8', timeout: 3000 }).trim();
+    return out && fs.existsSync(out) ? out : null;
+  } catch {
+    return null;
+  }
+}
+
+function candidatePaths() {
+  const home = os.homedir();
+  return [
+    path.join(home, '.claude', 'local', 'claude'),
+    path.join(home, '.local', 'bin', 'claude'),
+    path.join(home, '.npm-global', 'bin', 'claude'),
+    path.join(home, '.npm', 'bin', 'claude'),
+    '/usr/local/bin/claude',
+    '/opt/homebrew/bin/claude',
+    '/usr/bin/claude',
+  ];
+}
+
+// Returns the resolved binary path, or null if nothing was found anywhere.
+function resolveClaudeBin(configPath) {
+  // An explicit user override is honored only while it still points at a
+  // real file -- a stale synced path from another machine/user must not
+  // block auto-detection on this one.
+  if (configPath && fs.existsSync(configPath)) return configPath;
+
+  const viaShell = resolveViaLoginShell();
+  if (viaShell) return viaShell;
+
+  return candidatePaths().find(p => fs.existsSync(p)) || null;
 }
 
 // ─── Git helpers ─────────────────────────────────────────────────────────────
@@ -297,7 +337,15 @@ async function configureCommand() {
 
 async function generateCommand() {
   const cfg = getConfig();
-  const claudeBin = findClaudeBin(cfg.claudePath);
+  const claudeBin = resolveClaudeBin(cfg.claudePath);
+  if (!claudeBin) {
+    vscode.window.showErrorMessage(
+      "Claude Commit: couldn't find the `claude` binary (checked PATH via your login shell, " +
+      '~/.claude/local, ~/.local/bin, ~/.npm-global/bin, ~/.npm/bin and common system paths). ' +
+      'Install Claude Code or set claudeCommit.claudePath manually for this machine.'
+    );
+    return;
+  }
 
   const gitExt = vscode.extensions.getExtension('vscode.git');
   if (!gitExt) { vscode.window.showErrorMessage('Git extension not found.'); return; }

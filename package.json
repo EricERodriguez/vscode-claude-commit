@@ -2,7 +2,7 @@
   "name": "claude-commit-message",
   "displayName": "Claude Commit Message",
   "description": "Generate git commit messages using Claude Code (claude -p). Supports Conventional Commits, emoji style, short/extended, Spanish/English — all configurable and persistent.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "AgentstudioIA",
   "author": {
     "name": "Eric Rodriguez",
@@ -129,8 +129,9 @@
         },
         "claudeCommit.claudePath": {
           "type": "string",
+          "scope": "machine",
           "default": "",
-          "description": "Full path to the claude binary. Leave empty to auto-detect from PATH and ~/.local/bin/claude."
+          "description": "Full path to the claude binary, for this machine only (never synced by Settings Sync — every PC can have a different one). Leave empty to auto-detect via your login shell's PATH, ~/.claude/local, ~/.local/bin, ~/.npm-global/bin, ~/.npm/bin, and common system paths."
         },
         "claudeCommit.maxDiffLines": {
           "type": "number",

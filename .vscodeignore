@@ -1,0 +1,8 @@
+.vscode/**
+.obsidian/**
+scripts/**
+*.canvas
+*.base
+*.vsix
+.gitignore
+.git/**

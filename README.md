@@ -173,7 +173,7 @@ ln -sfn "$(pwd)/vscode-claude-commit" ~/.vscode/extensions/ericrodriguez.claude-
 ## Troubleshooting
 
 **`claude` binary not found**
-Set the full path in settings: `claudeCommit.claudePath` → `/home/youruser/.local/bin/claude`
+The extension auto-detects `claude` via your login shell's `PATH` and a handful of common install locations (`~/.claude/local`, `~/.local/bin`, `~/.npm-global/bin`, `~/.npm/bin`, `/usr/local/bin`, `/opt/homebrew/bin`, `/usr/bin`). If none of those match your setup, set the full path in settings: `claudeCommit.claudePath` → `/home/youruser/.local/bin/claude`. This setting is machine-scoped — it is never synced by Settings Sync, so setting it on one PC can't break another.
 
 **"VS Code disconnect" error in Claude window**
 This is a known issue when `claude -p` inherits VS Code environment variables and tries to connect to the active MCP server. This extension strips those variables automatically. If you see it, make sure you're running extension version 1.0.0+.
