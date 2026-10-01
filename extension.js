@@ -239,6 +239,43 @@ function getStagedDiff(repoPath) {
   });
 }
 
+// Picks the repository the user actually meant when several are open in the
+// same window. The scm/title button passes the clicked SourceControl as arg.
+async function pickRepository(api, arg) {
+  const repos = api.repositories;
+  if (repos.length <= 1) return repos[0];
+
+  const argRoot = arg && arg.rootUri && arg.rootUri.fsPath;
+  if (argRoot) {
+    const match = repos.find(r => r.rootUri.fsPath === argRoot);
+    if (match) return match;
+  }
+
+  const selected = repos.filter(r => r.ui && r.ui.selected);
+  if (selected.length === 1) return selected[0];
+
+  const editorUri = vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri;
+  if (editorUri && editorUri.scheme === 'file') {
+    const owner = api.getRepository && api.getRepository(editorUri);
+    if (owner && owner.state.indexChanges.length > 0) return owner;
+  }
+
+  const withStaged = repos.filter(r => r.state.indexChanges.length > 0);
+  if (withStaged.length === 1) return withStaged[0];
+
+  const candidates = withStaged.length > 0 ? withStaged : repos;
+  const picked = await vscode.window.showQuickPick(
+    candidates.map(r => ({
+      label: path.basename(r.rootUri.fsPath),
+      description: `${r.state.indexChanges.length} staged`,
+      detail: r.rootUri.fsPath,
+      repo: r,
+    })),
+    { placeHolder: 'Select the repository to generate a commit message for' }
+  );
+  return picked && picked.repo;
+}
+
 // ─── Claude call ─────────────────────────────────────────────────────────────
 
 function callClaude(bin, prompt) {
@@ -335,7 +372,7 @@ async function configureCommand() {
 
 // ─── Generate command ─────────────────────────────────────────────────────────
 
-async function generateCommand() {
+async function generateCommand(arg) {
   const cfg = getConfig();
   const claudeBin = resolveClaudeBin(cfg.claudePath);
   if (!claudeBin) {
@@ -351,8 +388,9 @@ async function generateCommand() {
   if (!gitExt) { vscode.window.showErrorMessage('Git extension not found.'); return; }
 
   const api = gitExt.exports.getAPI(1);
-  const repo = api.repositories[0];
-  if (!repo) { vscode.window.showErrorMessage('No git repository open.'); return; }
+  if (api.repositories.length === 0) { vscode.window.showErrorMessage('No git repository open.'); return; }
+  const repo = await pickRepository(api, arg);
+  if (!repo) return;
 
   await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: 'Claude: generating commit message…', cancellable: false },
@@ -365,7 +403,7 @@ async function generateCommand() {
       }
 
       if (!diff.trim()) {
-        vscode.window.showWarningMessage('No staged changes. Run git add first.'); return;
+        vscode.window.showWarningMessage(`No staged changes in ${path.basename(repo.rootUri.fsPath)}. Run git add first.`); return;
       }
 
       const lines = diff.split('\n');

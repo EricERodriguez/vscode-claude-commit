@@ -2,7 +2,7 @@
   "name": "claude-commit-message",
   "displayName": "Claude Commit Message",
   "description": "Generate git commit messages using Claude Code (claude -p). Supports Conventional Commits, emoji style, short/extended, Spanish/English — all configurable and persistent.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "publisher": "AgentstudioIA",
   "author": {
     "name": "Eric Rodriguez",
