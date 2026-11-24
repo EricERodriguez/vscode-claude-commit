@@ -172,6 +172,10 @@ function buildCleanEnv() {
     'CLAUDECODE', 'CLAUDE_CODE_CHILD_SESSION', 'CLAUDE_CODE_SESSION_ID',
     'CLAUDE_CODE_SSE_PORT', 'CLAUDE_CODE_ENTRYPOINT', 'AI_AGENT',
     'VSCODE_INJECTION', 'TERM_PROGRAM',
+    // Set by the claude-with-memory wrapper. If VS Code inherited it, the
+    // user's vault Stop hook blocks every `claude -p` run (exit 2) until a
+    // session note exists, so the subprocess loops and ends empty / code 1.
+    'MEMORY_PREFLIGHT_RECEIPT_ID',
   ]);
   const env = {};
   for (const [k, v] of Object.entries(process.env)) {
@@ -278,9 +282,19 @@ async function pickRepository(api, arg) {
 
 // ─── Claude call ─────────────────────────────────────────────────────────────
 
-function callClaude(bin, prompt) {
+// Generating a commit message is a single text completion: no tools, no
+// skills, no MCP servers, no saved session. Without these flags `claude -p`
+// behaves like a full agent session (global CLAUDE.md instructions, hooks,
+// tool calls that get denied in -p mode) and often finishes with empty output.
+function claudeArgs(model) {
+  const args = ['-p', '--tools', '', '--disable-slash-commands', '--strict-mcp-config', '--no-session-persistence'];
+  if (model) args.push('--model', model);
+  return args;
+}
+
+function callClaude(bin, prompt, model, cwd) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(bin, ['-p'], { env: buildCleanEnv(), shell: false });
+    const proc = spawn(bin, claudeArgs(model), { env: buildCleanEnv(), shell: false, cwd });
     let out = '', err = '';
     proc.stdout.on('data', d => (out += d));
     proc.stderr.on('data', d => (err += d));
@@ -291,7 +305,10 @@ function callClaude(bin, prompt) {
         const clean = out.trim().replace(/^```[^\n]*\n?/, '').replace(/\n?```$/, '').trim();
         resolve(clean);
       } else {
-        reject(new Error(err.trim() || `claude exited with code ${code}`));
+        const detail = err.trim() || out.trim();
+        reject(new Error(detail
+          ? `claude exited with code ${code}: ${detail.slice(0, 500)}`
+          : `claude exited with code ${code} and no output (check Stop hooks in ~/.claude/settings.json)`));
       }
     });
     proc.on('error', e => {
@@ -313,6 +330,7 @@ function getConfig() {
     includeScope: c.get('includeScope', false),
     claudePath:   c.get('claudePath', ''),
     maxDiffLines: c.get('maxDiffLines', 500),
+    model:        c.get('model', 'haiku'),
   };
 }
 
@@ -413,7 +431,7 @@ async function generateCommand(arg) {
 
       let message;
       try {
-        message = await callClaude(claudeBin, buildPrompt(cfg, diffToSend));
+        message = await callClaude(claudeBin, buildPrompt(cfg, diffToSend), cfg.model, repo.rootUri.fsPath);
       } catch (e) {
         vscode.window.showErrorMessage(`Claude error: ${e.message}`); return;
       }

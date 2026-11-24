@@ -2,7 +2,7 @@
   "name": "claude-commit-message",
   "displayName": "Claude Commit Message",
   "description": "Generate git commit messages using Claude Code (claude -p). Supports Conventional Commits, emoji style, short/extended, Spanish/English — all configurable and persistent.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "publisher": "AgentstudioIA",
   "author": {
     "name": "Eric Rodriguez",
@@ -139,6 +139,11 @@
           "minimum": 50,
           "maximum": 5000,
           "description": "Maximum number of diff lines to send to Claude. Large diffs are truncated."
+        },
+        "claudeCommit.model": {
+          "type": "string",
+          "default": "haiku",
+          "description": "Model passed to `claude --model` (alias like haiku, sonnet, opus, or a full model ID). Leave empty to use your Claude Code default."
         }
       }
     }

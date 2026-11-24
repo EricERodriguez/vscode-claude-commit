@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.4] - 2026-11-24
+
+### Fixed
+- "Claude error: claude exited with code 1" (or an empty message): `claude -p`
+  ran as a full agent session, picking up the global CLAUDE.md, hooks, tools
+  and MCP servers. A vault Stop hook kept blocking the end of the run when
+  VS Code had inherited `MEMORY_PREFLIGHT_RECEIPT_ID`. The call now runs with
+  `--tools "" --disable-slash-commands --strict-mcp-config
+  --no-session-persistence` and strips that variable from the environment.
+- Error messages now include stdout when stderr is empty.
+
+### Added
+- `claudeCommit.model` setting (default `haiku`): fast and cheap for commit messages.
+
 ## [1.0.3] - 2026-09-30
 
 ### Fixed
