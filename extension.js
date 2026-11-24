@@ -232,15 +232,62 @@ function resolveClaudeBin(configPath) {
 
 // ─── Git helpers ─────────────────────────────────────────────────────────────
 
-function getStagedDiff(repoPath) {
+// Generated / vendored files whose diff is huge and says nothing about intent.
+// They still show up in the --stat summary, just without their content.
+const NOISY_PATHSPECS = [
+  '*.lock', '*-lock.json', '*-lock.yaml', 'npm-shrinkwrap.json', '*.min.js', '*.min.css',
+  '*.map', '*.snap', '*.svg', 'dist/*', 'build/*', 'out/*', 'vendor/*',
+].map(p => `:(exclude,glob)**/${p}`);
+
+function runGit(repoPath, args) {
   return new Promise((resolve, reject) => {
-    const proc = spawn('git', ['diff', '--staged', '--no-color'], { cwd: repoPath });
+    const proc = spawn('git', args, { cwd: repoPath });
     let out = '', err = '';
     proc.stdout.on('data', d => (out += d));
     proc.stderr.on('data', d => (err += d));
-    proc.on('close', code => code === 0 ? resolve(out) : reject(new Error(err || `git diff failed (${code})`)));
+    proc.on('close', code => code === 0 ? resolve(out) : reject(new Error(err || `git ${args[0]} failed (${code})`)));
     proc.on('error', reject);
   });
+}
+
+async function getStagedDiff(repoPath) {
+  const stat = await runGit(repoPath, ['diff', '--staged', '--no-color', '--stat=200']);
+  if (!stat.trim()) return '';
+  const diff = await runGit(repoPath, ['diff', '--staged', '--no-color', '--', '.', ...NOISY_PATHSPECS]);
+  return `Files changed:\n${stat}\n${diff}`;
+}
+
+const MAX_LINE_CHARS = 400;
+
+// Keeps the prompt bounded and inert:
+//  - long lines (minified code, base64, JSON blobs) are clipped,
+//  - the total is capped by lines AND characters (500 lines of 50 KB each is
+//    still ~6M tokens),
+//  - every "@" gets a zero-width space after it, because `claude -p` expands
+//    "@path" mentions in the prompt into attached file/folder contents — a diff
+//    full of `@angular/core` or `@/src/...` imports pulled in >500k tokens.
+function prepareDiff(diff, maxLines, maxChars) {
+  let lines = diff.split('\n').map(l => l.length > MAX_LINE_CHARS ? l.slice(0, MAX_LINE_CHARS) + ' …[line clipped]' : l);
+  const notes = [];
+  if (lines.length > maxLines) {
+    notes.push(`truncated at ${maxLines} of ${lines.length} lines`);
+    lines = lines.slice(0, maxLines);
+  }
+  let text = lines.join('\n');
+  if (text.length > maxChars) {
+    notes.push(`truncated at ${maxChars} characters`);
+    text = text.slice(0, maxChars);
+  }
+  if (notes.length) text += `\n\n[diff ${notes.join(', ')}]`;
+  return text.replace(/@/g, '@​');
+}
+
+// Empty scratch dir used as the subprocess cwd so `claude -p` doesn't load the
+// repo's CLAUDE.md / project memory or resolve relative paths inside it.
+function neutralCwd() {
+  const dir = path.join(os.tmpdir(), 'claude-commit-message');
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
 }
 
 // Picks the repository the user actually meant when several are open in the
@@ -330,6 +377,7 @@ function getConfig() {
     includeScope: c.get('includeScope', false),
     claudePath:   c.get('claudePath', ''),
     maxDiffLines: c.get('maxDiffLines', 500),
+    maxDiffChars: c.get('maxDiffChars', 60000),
     model:        c.get('model', 'haiku'),
   };
 }
@@ -424,14 +472,11 @@ async function generateCommand(arg) {
         vscode.window.showWarningMessage(`No staged changes in ${path.basename(repo.rootUri.fsPath)}. Run git add first.`); return;
       }
 
-      const lines = diff.split('\n');
-      const diffToSend = lines.length > cfg.maxDiffLines
-        ? lines.slice(0, cfg.maxDiffLines).join('\n') + `\n\n[diff truncated at ${cfg.maxDiffLines} of ${lines.length} lines]`
-        : diff;
+      const diffToSend = prepareDiff(diff, cfg.maxDiffLines, cfg.maxDiffChars);
 
       let message;
       try {
-        message = await callClaude(claudeBin, buildPrompt(cfg, diffToSend), cfg.model, repo.rootUri.fsPath);
+        message = await callClaude(claudeBin, buildPrompt(cfg, diffToSend), cfg.model, neutralCwd());
       } catch (e) {
         vscode.window.showErrorMessage(`Claude error: ${e.message}`); return;
       }

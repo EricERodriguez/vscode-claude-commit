@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.5] - 2026-11-24
+
+### Fixed
+- "Prompt is too long · the request is ~1227851 tokens": `claude -p` expands
+  every `@path` in the prompt into attached file/folder contents, so diffs with
+  `@scope/package` imports or `@/src` aliases pulled in hundreds of thousands
+  of tokens. Every `@` in the diff is now neutralized with a zero-width space.
+- `maxDiffLines` alone didn't bound size (minified files, lockfiles, base64):
+  lines over 400 chars are clipped, a new `claudeCommit.maxDiffChars` cap
+  (default 60000) applies, and lockfiles, `*.min.*`, `*.map`, `*.snap`, `*.svg`,
+  `dist/`, `build/`, `out/` and `vendor/` are left out of the diff body (they
+  still appear in the `--stat` file summary sent first).
+- `claude -p` now runs from an empty temp dir instead of the repo, so the
+  repo's CLAUDE.md / project memory are not loaded.
+
 ## [1.0.4] - 2026-11-24
 
 ### Fixed
